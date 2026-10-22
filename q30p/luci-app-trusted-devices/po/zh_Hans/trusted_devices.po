@@ -1,0 +1,54 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: LuCI Trusted Devices\n"
+"Report-Msgid-Bugs-To: \n"
+"Language: zh_Hans\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#: htdocs/luci-static/resources/view/trusted_devices.js:22
+#: root/usr/share/luci/menu.d/luci-app-trusted-devices.json:3
+msgid "Trusted Devices"
+msgstr "可信设备"
+
+#: htdocs/luci-static/resources/view/trusted_devices.js:23
+msgid "Devices in the whitelist can open LuCI without entering a password and are logged in automatically. All other devices still have to log in normally."
+msgstr "白名单内的设备打开 LuCI 时无需输入密码，会自动登录；其他设备仍需正常登录。"
+
+#: htdocs/luci-static/resources/view/trusted_devices.js:25
+msgid "Settings"
+msgstr "设置"
+
+#: htdocs/luci-static/resources/view/trusted_devices.js:28
+msgid "Enable"
+msgstr "启用"
+
+#: htdocs/luci-static/resources/view/trusted_devices.js:32
+msgid "Login account"
+msgstr "登录账号"
+
+#: htdocs/luci-static/resources/view/trusted_devices.js:33
+msgid "System account used for the passwordless login, defaults to luci-trusted and usually does not need to be changed."
+msgstr "免密登录所使用的系统账号，默认 luci-trusted，通常无需修改。"
+
+#: htdocs/luci-static/resources/view/trusted_devices.js:37
+msgid "Trusted devices"
+msgstr "可信设备"
+
+#: htdocs/luci-static/resources/view/trusted_devices.js:42
+msgid "Name"
+msgstr "名称"
+
+#: htdocs/luci-static/resources/view/trusted_devices.js:43
+msgid "Remark only, may be left empty."
+msgstr "仅作备注，可留空。"
+
+#: htdocs/luci-static/resources/view/trusted_devices.js:45
+msgid "MAC address"
+msgstr "MAC 地址"
+
+#: htdocs/luci-static/resources/view/trusted_devices.js:46
+msgid "Enter the device MAC address, or pick a currently online device from the list."
+msgstr "填写设备 MAC 地址，或从列表中直接选择当前在线的设备。"

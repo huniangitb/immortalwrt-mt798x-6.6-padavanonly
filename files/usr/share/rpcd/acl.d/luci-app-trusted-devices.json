@@ -1,0 +1,14 @@
+{
+	"luci-app-trusted-devices": {
+		"description": "Grant access to trusted device configuration",
+		"read": {
+			"uci": [ "trusted_devices" ],
+			"ubus": {
+				"luci-rpc": [ "getHostHints" ]
+			}
+		},
+		"write": {
+			"uci": [ "trusted_devices" ]
+		}
+	}
+}

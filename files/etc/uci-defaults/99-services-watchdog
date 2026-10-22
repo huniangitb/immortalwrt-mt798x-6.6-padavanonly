@@ -1,0 +1,8 @@
+#!/bin/sh
+# 首次开机 / 清刷后启用看门狗服务
+for s in rpcd-watchdog wifi-auto-channel; do
+	[ -x "/etc/init.d/$s" ] || continue
+	/etc/init.d/$s enable
+	/etc/init.d/$s start >/dev/null 2>&1
+done
+exit 0

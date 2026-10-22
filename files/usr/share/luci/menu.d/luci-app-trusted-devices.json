@@ -1,0 +1,14 @@
+{
+	"admin/system/trusted_devices": {
+		"title": "Trusted Devices",
+		"order": 95,
+		"action": {
+			"type": "view",
+			"path": "trusted_devices"
+		},
+		"depends": {
+			"acl": [ "luci-app-trusted-devices" ],
+			"uci": { "trusted_devices": true }
+		}
+	}
+}

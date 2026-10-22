@@ -1,0 +1,24 @@
+#!/bin/sh
+# 为「可信设备免密登录」准备专用账号 luci-trusted:
+#   1) 在 /etc/shadow 增加空密码条目 —— rpcd 用 getspnam() 校验, 有它即可通过;
+#      不建立 /etc/passwd 账号, 因此无法 SSH / su / 登录 shell, 也不能被正常登录表单使用
+#      (dispatcher 会拒绝通过表单使用该账号)
+#   2) 在 /etc/config/rpcd 增加 login 段, 使该账号能建立拥有完整 LuCI 权限的会话
+TRUSTED_USER="luci-trusted"
+
+if [ -f /etc/shadow ] && ! grep -q "^${TRUSTED_USER}:" /etc/shadow; then
+	printf '%s::20000:0:99999:7:::\n' "$TRUSTED_USER" >> /etc/shadow
+fi
+
+if [ -f /etc/config/rpcd ] && ! grep -q "username '${TRUSTED_USER}'" /etc/config/rpcd; then
+	uci -q batch <<-EOF
+		add rpcd login
+		set rpcd.@login[-1].username='${TRUSTED_USER}'
+		set rpcd.@login[-1].password='\$p\$${TRUSTED_USER}'
+		add_list rpcd.@login[-1].read='*'
+		add_list rpcd.@login[-1].write='*'
+		commit rpcd
+	EOF
+fi
+
+exit 0

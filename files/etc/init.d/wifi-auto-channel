@@ -1,0 +1,15 @@
+#!/bin/sh /etc/rc.common
+# 中继信道自动对齐: 开机后启动, 周期性检查(STA 已连接时几乎零开销)
+# 目标 AP 扫不到时(exit 2)退避到 4 分钟一次, 避免频繁离频道扫描影响 AP
+START=96
+STOP=10
+USE_PROCD=1
+
+start_service() {
+	procd_open_instance
+	procd_set_param command /bin/sh -c 'sleep 30; while true; do /usr/sbin/wifi-auto-channel; [ $? -eq 2 ] && sleep 240 || sleep 60; done'
+	procd_set_param respawn
+	procd_set_param stdout 0
+	procd_set_param stderr 0
+	procd_close_instance
+}

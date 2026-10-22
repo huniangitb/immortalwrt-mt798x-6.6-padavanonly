@@ -1,0 +1,56 @@
+#!/bin/sh
+# wifi-auto-channel: 单射频 AP+STA(中继) 时自动对齐信道
+# 背景: MT7981 的 2.4G AP(ra0) 与 STA(apcli0) 共用一颗射频;
+#       若 AP 信道与要连接的目标 AP 不一致, STA 探测帧发到错误信道,
+#       驱动陷入 ProbeTimeoutAtJoinAction 死循环, 还会拖死 iwinfo/rpcd.
+# 策略: STA 未连接时扫描目标 SSID 所在信道, 与当前 AP 信道不同则切换并重载.
+
+LOG_TAG="wifi-auto-channel"
+
+command -v iwpriv >/dev/null 2>&1 || exit 0
+[ -r /lib/functions.sh ] || exit 0
+. /lib/functions.sh
+
+sta_sec=""
+_find_sta() {
+	local cfg="$1" mode
+	config_get mode "$cfg" mode
+	[ "$mode" = "sta" ] && [ -z "$sta_sec" ] && sta_sec="$cfg"
+}
+
+config_load wireless
+config_foreach _find_sta wifi-iface
+[ -n "$sta_sec" ] || exit 0
+
+config_get ssid "$sta_sec" ssid
+config_get dev  "$sta_sec" device
+config_get phy  "$dev"      phy
+config_get cur  "$dev"      channel
+
+[ -n "$ssid" ] && [ -n "$phy" ] || exit 0
+
+# 目标 SSID 已连上则不动, 避免离频道扫描打断 AP
+for i in $(iwconfig 2>/dev/null | awk '/^[a-z]/{print $1}'); do
+	case "$i" in
+		apcli*)
+			iwconfig "$i" 2>/dev/null | grep -q "ESSID:\"$ssid\"" &&
+			! iwconfig "$i" 2>/dev/null | grep -q "Not-Associated" &&
+			exit 0
+			;;
+	esac
+done
+
+# 扫描目标 AP 所在信道
+iwpriv "$phy" set SiteSurvey=1 >/dev/null 2>&1
+sleep 6
+survey=$(iwpriv "$phy" get_site_survey 2>/dev/null)
+ch=$(printf '%s\n' "$survey" | awk -v s="$ssid" '$3==s {print $2; exit}')
+
+# 目标 AP 不在范围(或被关闭)时返回 2, 由调用方拉长重试间隔, 减少离频道扫描
+[ -n "$ch" ] || { logger -t "$LOG_TAG" "target '$ssid' not found in scan"; exit 2; }
+[ "$ch" = "$cur" ] && exit 0
+
+logger -t "$LOG_TAG" "target '$ssid' on channel $ch (was $cur), switching $dev"
+uci set "wireless.$dev.channel=$ch"
+uci commit wireless
+wifi reload >/dev/null 2>&1

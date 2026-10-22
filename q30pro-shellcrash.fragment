@@ -1,0 +1,73 @@
+# Q30 Pro + ShellCrash 裁剪优化片（128MB NAND 版）
+# 用法：make defconfig 得到分支默认 .config 后，追加本文件内容，再 make defconfig
+#
+# 空间模型（128MB NAND）：
+#   kernel(ubi+fit) ~8MB | rootfs(squashfs, PARTSIZE) | 剩余 = rootfs_data
+#   mihomo 内核 ~30MB 存在 rootfs_data，所以目标 = 最小化 PARTSIZE + 最小化固件
+
+# ---- 分区：160MB（squashfs 未占满的部分自动回收为 rootfs_data，剩余给未来升级留余量）----
+CONFIG_TARGET_ROOTFS_PARTSIZE=160
+
+# ---- 优化等级 ----
+# 开发选项菜单（ccache 的前置条件）
+CONFIG_DEVEL=y
+# 加速增量构建（首次构建无收益，之后改动重编大幅提速）
+CONFIG_CCACHE=y
+# 用户态 C/C++ 包：体积优先
+CONFIG_KERNEL_CC_OPTIMIZE_FOR_SIZE=y
+# GCC 只有 full LTO（无 Thin 档位），布尔开关；编译时间显著变长
+CONFIG_USE_LTO=y
+
+# ---- 安全加固换体积（三处小头，均以削弱加固为代价，自行权衡）----
+CONFIG_PKG_ASLR_PIE_NONE=y          # 去掉 PIE 重定位，单个二进制省 5-15%
+CONFIG_PKG_RELRO_PARTIAL=y          # Partial RELRO 代替 Full
+CONFIG_PKG_CC_STACKPROTECTOR_NONE=y # 去掉用户态 SSP
+
+# ---- 内核裁剪 ----
+# CONFIG_KERNEL_DEBUG_FS is not set
+# CONFIG_KERNEL_DEBUG_KERNEL is not set
+# CONFIG_KERNEL_KALLSYMS is not set
+# CONFIG_KERNEL_PRINTK_TIME is not set
+
+# ---- 无线：wpad-basic-mbedtls 替代 wpad-openssl，省 ~1.5MB ----
+# 仍完整支持 WPA3-SAE、PMF(802.11w)、OWE —— 你验证稳定的组合不受影响
+# CONFIG_PACKAGE_wpad-openssl is not set
+CONFIG_PACKAGE_wpad-basic-mbedtls=y
+
+# ---- ShellCrash 运行必需（不变）----
+CONFIG_PACKAGE_kmod-nft-tproxy=y
+CONFIG_PACKAGE_kmod-nft-socket=y
+CONFIG_PACKAGE_kmod-tun=y
+CONFIG_PACKAGE_ip-full=y
+CONFIG_PACKAGE_kmod-inet-diag=y
+CONFIG_PACKAGE_ca-certificates=y
+CONFIG_PACKAGE_curl=y
+
+# ---- 分支补丁要求：mtk_eth_soc.c 的 HNAT 钩子未加守卫，必须启用（运行时可不开流控）----
+CONFIG_PACKAGE_kmod-mediatek_hnat=y
+
+# ---- 内存/网络收益（不变）----
+CONFIG_PACKAGE_zram-swap=y
+CONFIG_PACKAGE_kmod-lib-lz4=y
+CONFIG_PACKAGE_kmod-tcp-bbr=y
+CONFIG_KERNEL_MEMCG=y
+CONFIG_KERNEL_MEMCG_KMEM=y
+CONFIG_KERNEL_CGROUP_SCHED=y
+
+# ---- DDNS（动态域名，远程访问用）----
+CONFIG_PACKAGE_ddns-scripts=y
+CONFIG_PACKAGE_ddns-scripts-services=y
+CONFIG_PACKAGE_luci-app-ddns=y
+
+# ---- 主题：argon（参考 q30p 配置），bootstrap 尽量禁用 ----
+CONFIG_PACKAGE_luci-theme-argon=y
+
+# ---- MTK 硬件路由优化 ----
+# 硬流控开关使用 luci-app-firewall 自带的"硬件流分载"(flow_offloading_hw)，
+# 后端 = 已内置的 kmod-mediatek_hnat + fullconenat；turboacc-mtk 因 feeds/luci
+# 新版 luci.mk 与老 Makefile 不兼容（元数据生成失败）而放弃。
+# mtwifi-cfg + 数据工具：q30p 同款兼容共存（mac80211 路线下休眠，无害）
+CONFIG_PACKAGE_mtwifi-cfg=y
+CONFIG_PACKAGE_datconf-lua=y
+CONFIG_PACKAGE_wifi-dats=y
+CONFIG_PACKAGE_luci-app-mtwifi-cfg=y

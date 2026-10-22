@@ -1,0 +1,47 @@
+#!/bin/sh
+# rpcd-watchdog: 监控 rpcd 存活与响应
+# 背景: 无线命令卡死时 rpcd 可能被拖死/挂起, 导致 LuCI 无法登录(拿不到 session)
+# 策略: 进程消失 或 ubus session 服务无响应 -> 自动重启 rpcd, 并记录日志
+
+LOG_TAG="rpcd-watchdog"
+INTERVAL=20
+NULL_SID="00000000000000000000000000000000"
+
+# 等待 ubus 与 rpcd 首次就绪(最多 ~90s), 避免开机早期误判
+i=0
+while [ $i -lt 90 ]; do
+	ubus -t 2 list >/dev/null 2>&1 && pidof rpcd >/dev/null 2>&1 && break
+	sleep 1
+	i=$((i + 1))
+done
+
+probe() {
+	# 返回 0 = 健康
+	pidof rpcd >/dev/null 2>&1 || return 1
+	ubus -t 3 call session get "{\"ubus_rpc_session\":\"$NULL_SID\"}" >/dev/null 2>&1 || return 1
+	return 0
+}
+
+restart_rpcd() {
+	logger -t "$LOG_TAG" "$1, restarting rpcd"
+	/etc/init.d/rpcd restart >/dev/null 2>&1
+	sleep 5
+}
+
+while true; do
+	sleep "$INTERVAL"
+
+	# rpcd 被禁用时不做干预
+	/etc/init.d/rpcd enabled || continue
+
+	if ! pidof rpcd >/dev/null 2>&1; then
+		restart_rpcd "process is gone"
+		continue
+	fi
+
+	if ! probe; then
+		# 二次确认, 避免偶发超时误判
+		sleep 3
+		probe || restart_rpcd "unresponsive (no ubus session)"
+	fi
+done

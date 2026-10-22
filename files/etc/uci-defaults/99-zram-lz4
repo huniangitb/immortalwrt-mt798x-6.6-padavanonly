@@ -1,0 +1,5 @@
+#!/bin/sh
+# zram 压缩算法改为 lz4（比默认 lzo 更快，压缩率略低；换页密集场景收益为正）
+uci -q set system.@system[0].zram_comp_algo='lz4'
+uci -q commit system
+exit 0
