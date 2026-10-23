@@ -55,10 +55,22 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-      - name: Configure
+      - name: Verify configuration
         run: |
-          make defconfig
-          grep -E 'CONFIG_TARGET_PROFILE|CONFIG_TARGET_ROOTFS_PARTSIZE|CONFIG_CCACHE=' .config
+          set -e
+          test -f .config
+          grep -E 'CONFIG_TARGET_PROFILE|CONFIG_TARGET_ROOTFS_PARTSIZE' .config
+          missing=0
+          for p in htop curl luci-theme-argon luci-app-ddns nano unzip \
+                   coreutils openssh-sftp-server libnghttp2 libudns \
+                   luci-app-mtwifi-cfg kmod-mt_wifi; do
+            if ! grep -q "^CONFIG_PACKAGE_$p=y" .config; then
+              echo "ERROR: CONFIG_PACKAGE_$p is missing from .config"
+              missing=1
+            fi
+          done
+          [ "$missing" = 0 ]
+          echo "Configuration OK, building with the committed .config as-is"
 
       - name: Download sources
         run: make -j$(nproc) download || make -j1 download V=s
@@ -69,6 +81,12 @@ jobs:
       - name: List artifacts
         run: |
           find bin/targets -maxdepth 4 -type f \( -name '*.bin' -o -name '*.manifest' \) | sort
+
+      - name: Upload config
+        uses: actions/upload-artifact@v4
+        with:
+          name: q30p-config
+          path: .config
 
       - name: Upload firmware
         uses: actions/upload-artifact@v4
