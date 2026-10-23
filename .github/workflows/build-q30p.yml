@@ -54,6 +54,9 @@ jobs:
           cp feeds.conf.default feeds.conf
           ./scripts/feeds update -a
           ./scripts/feeds install -a
+          # 'feeds install' runs refresh_config() which can prune selections
+          # in a fresh tree; restore the exact committed configuration.
+          git checkout HEAD -- .config
 
       - name: Verify configuration
         run: |
