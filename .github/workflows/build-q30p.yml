@@ -57,12 +57,25 @@ jobs:
           # 'feeds install' runs refresh_config() which can prune selections
           # in a fresh tree; restore the exact committed configuration.
           git checkout HEAD -- .config
+          # Feeds move independently of this tree. Add explicit defaults for
+          # newly introduced symbols while keeping every committed selection.
+          make defconfig
 
       - name: Verify configuration
         run: |
           set -e
           test -f .config
           grep -E 'CONFIG_TARGET_PROFILE|CONFIG_TARGET_ROOTFS_PARTSIZE' .config
+          # Every package selection committed in .config must survive the
+          # defconfig refresh; otherwise the build would not match it.
+          lost=$(comm -23 \
+            <(git show HEAD:.config | grep -E '^CONFIG_PACKAGE_[A-Za-z0-9_.+-]+=y$' | sort) \
+            <(grep -E '^CONFIG_PACKAGE_[A-Za-z0-9_.+-]+=y$' .config | sort))
+          if [ -n "$lost" ]; then
+            echo "ERROR: package selections lost after config refresh:"
+            echo "$lost"
+            exit 1
+          fi
           missing=0
           for p in htop curl luci-theme-argon luci-app-ddns nano unzip \
                    coreutils openssh-sftp-server libnghttp2 libudns \
@@ -73,7 +86,7 @@ jobs:
             fi
           done
           [ "$missing" = 0 ]
-          echo "Configuration OK, building with the committed .config as-is"
+          echo "Configuration OK, all committed selections preserved"
 
       - name: Download sources
         run: make -j$(nproc) download || make -j1 download V=s
