@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 1
 
@@ -99,13 +99,15 @@ jobs:
           find bin/targets -maxdepth 4 -type f \( -name '*.bin' -o -name '*.manifest' \) | sort
 
       - name: Upload config
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: q30p-config
           path: .config
+          include-hidden-files: true
+          if-no-files-found: error
 
       - name: Upload firmware
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: q30p-firmware
           path: |
